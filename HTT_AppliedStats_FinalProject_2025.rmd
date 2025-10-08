@@ -1,0 +1,45 @@
+---
+output:
+  reprex::reprex_document:
+    venue: "gh"
+    advertise: FALSE
+    session_info: TRUE
+    style: TRUE
+    comment: "#;-)"
+    tidyverse_quiet: FALSE
+    std_out_err: TRUE
+knit: reprex::reprex_render
+---
+
+```{r}
+# Load libraries
+library("tidyverse")
+```
+
+```{r}
+# Load tomato thrips damage data from GitHub
+TomatoThripsDamageRS <- read.csv("https://raw.githubusercontent.com/mdr227/HTT-AppliedStats/refs/heads/main/HTTFruitRating_2025_RS.csv?token=GHSAT0AAAAAADLVRQOZ7M7GOEUXXCCI4HD22HG2CVA")
+
+TomatoThripsDamageSEAREC <- read.csv("https://raw.githubusercontent.com/mdr227/HTT-AppliedStats/refs/heads/main/HTTFruitRating_2025_SEAREC.csv?token=GHSAT0AAAAAADLVRQOYXMVFEJGTB2WXSCJS2HG2DCQ")
+# Load ground cover ID data from GitHub
+GroundCoverID <- read.csv("https://raw.githubusercontent.com/mdr227/HTT-AppliedStats/refs/heads/main/Site_GroundCover_2025_appliedstats.csv?token=GHSAT0AAAAAADLVRQOYK22WUFVVEIWS6EGQ2HG2EUA")
+
+
+# Create data frame for tomato thrips damage for both RS and SEAREC sites
+TomatoThripsDamage_raw <- bind_rows(TomatoThripsDamageRS, TomatoThripsDamageSEAREC)
+
+# Change column name 'ground cover' to 'plot_ID'
+TomatoThripsDamage_raw <- TomatoThripsDamage_raw %>%
+  rename(plot_ID = ground_cover)
+  
+# Add 'ground_cover' column to combined data
+TomatoThripsDamage_raw <- left_join(TomatoThripsDamage_raw, GroundCoverID, by = "plot_ID")
+
+# Subset to remove redundant columns "X", "site.y", and "year"
+TomatoThripsDamage <- subset(TomatoThripsDamage_raw, select= -c(X, site.y, year))
+
+# Rename column 'site.x' to 'site'
+TomatoThripsDamage <- TomatoThripsDamage %>%
+  rename(site = site.x)
+
+```
