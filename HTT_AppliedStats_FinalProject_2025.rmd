@@ -18,6 +18,7 @@ library("tidyverse")
 
 ```{r}
 # Load tomato thrips damage data from GitHub
+# change to local file path
 TomatoThripsDamageRS <- read.csv("https://raw.githubusercontent.com/mdr227/HTT-AppliedStats/refs/heads/main/HTTFruitRating_2025_RS.csv?token=GHSAT0AAAAAADLVRQOZ7M7GOEUXXCCI4HD22HG2CVA")
 
 TomatoThripsDamageSEAREC <- read.csv("https://raw.githubusercontent.com/mdr227/HTT-AppliedStats/refs/heads/main/HTTFruitRating_2025_SEAREC.csv?token=GHSAT0AAAAAADLVRQOYXMVFEJGTB2WXSCJS2HG2DCQ")
