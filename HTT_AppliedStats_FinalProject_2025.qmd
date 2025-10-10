@@ -1,0 +1,50 @@
+---
+title: "HTT_AppliedStats_FinalProject_2025"
+format: html
+---
+```{r}
+# via Quarto: Ensure that the code used to generate markdown isn't included in the final output
+#| echo: false
+```
+
+```{r}
+# Load libraries
+library("tidyverse")
+```
+
+```{r}
+# Set working directory in terminal
+# setwd("C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/  github/HTT-AppliedStats/data")
+
+
+# Load tomato thrips damage data from local environment
+TomatoThripsDamageRS <- read.csv("HTTFruitRating_2025_RS.csv")
+TomatoThripsDamageSEAREC <- read.csv("HTTFruitRating_2025_SEAREC.csv")
+
+# Load ground cover ID data from local environment
+GroundCoverID <- read.csv("Site_GroundCover_2025_appliedstats.csv")
+
+# Create data frame for tomato thrips damage for both RS and SEAREC sites
+TomatoThripsDamage_raw <- bind_rows(TomatoThripsDamageRS, TomatoThripsDamageSEAREC)
+
+# Change column name 'ground cover' to 'plot_ID'
+TomatoThripsDamage_raw <- TomatoThripsDamage_raw %>%
+  rename(plot_ID = ground_cover)
+  
+# Add 'ground_cover' column to combined data
+TomatoThripsDamage_raw <- left_join(TomatoThripsDamage_raw, GroundCoverID, by = "plot_ID")
+
+# Subset to remove redundant columns "X", "site.y", and "year"
+TomatoThripsDamage <- subset(TomatoThripsDamage_raw, select= -c(X, site.y, year))
+
+# Rename column 'site.x' to 'site'
+TomatoThripsDamage <- TomatoThripsDamage %>%
+  rename(site = site.x)
+
+```
+
+```{r}
+# Tidy temperature data
+
+
+```
