@@ -14,7 +14,7 @@ library("tidyverse")
 
 ```{r}
 # Set working directory in terminal
-# setwd("C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/  github/HTT-AppliedStats/data")
+# setwd( "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data")
 
 
 # Load tomato thrips damage data from local environment
