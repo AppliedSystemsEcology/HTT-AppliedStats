@@ -9,7 +9,9 @@ format: html
 
 ```{r}
 # Load libraries
-library("tidyverse")
+library(tidyverse)
+library(dplyr)
+library(purrr)
 ```
 
 ```{r}
@@ -45,6 +47,56 @@ TomatoThripsDamage <- TomatoThripsDamage %>%
 
 ```{r}
 # Tidy temperature data
+# List temperature files from local path 
+temp_list <- list.files(path = "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data", pattern = "^temp_")
+
+# Create data frame names for temp_list without ".csv" at end
+temp_names <- sub("\\.csv$", "", temp_list)
+
+for (i in temp_names) {
+# set file path
+  filepath <- file.path("C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data", 
+  paste(i, ".csv", sep = ""))
+# read each file and name it the file name
+  assign(i, 
+    read.delim(filepath,
+    skip = 19,
+    header = TRUE,
+    colClasses=c("factor","factor", rep("numeric", 4)),
+    sep = ","))
+}
+
+
+
+
+## Trying to tidy over multiple data frames
+temp_df_list <- ls(.GlobalEnv, pattern = "^temp_")
+
+  delete_extra_columns <- temp_df_list %>% mutate(
+    TemperatureStatus = NULL,
+    HumidityStatus = NULL,
+    X = NULL, 
+    X.1 = NULL)
+
+
+# update changes to dataframe list in the global environment
+list2env(new_data, .GlobalEnv)  
+
+# tidyverse initiated
+# delete some columns
+  
+# rename column names
+# lubridate on date and time columns
+# add column for 'below' or 'above'
+# add column for site
+# add column for groundcover
+
+
+## data corrections with if then statement
+# make sure all temp readings are either all C or all F
+# fill gaps with averages
+
+}
 
 
 ```
