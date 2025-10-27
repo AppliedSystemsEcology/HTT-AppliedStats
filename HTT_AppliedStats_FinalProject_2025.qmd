@@ -68,35 +68,41 @@ for (i in temperature_names) {
 
 }
 
+
 ## Tidy over multiple data frames
 # Create list of temp dataframes
 temperature_df_list <- mget(ls(.GlobalEnv, pattern = "^temp_")
 
-temperature_df_list_purrr <- temperature_df_list %>%
-  map(~ .x %>% 
-    # rename column names
-    rename(date = YYYY.MM.DD,
+temperature_df_list_purrr <- purrr::map2(
+  # Defines list of data frames
+  .x = temperature_df_list,
+  # Defines list of strings that correspond to data fram names
+  .y = temperature_names,
+  .f = ~ .x %>%
+     rename(date = YYYY.MM.DD,
     time = HH.MM.SS,
     temperature = Temperature...,
     humidity = Humidity..RH.) %>%
     # delete some empty columns
-    select(!(c(TemperatureStatus, HumidityStatus, X, X.1)))
+    select(!(c(TemperatureStatus, HumidityStatus, X, X.1))) %>%
+    # make sensor_ID column, named as file name
+    mutate(sensor_ID = .y) %>%
+    # Create columns from file name contents
+# add column for 'below' or 'above'
+# add column for site
+# add column for groundcover
+    separate(col = sensor_ID, into = c("temp", "site", "plot_ID_row", "sensor_placement"), sep = "_") %>%
+  # delete dummy temp column
+    select(!(temp)) 
+    #%>%
+    # separate plot_ID and row (this isnt working with no deliminator)
+    #separate(col = plot_ID_row, into = c("plot_ID", "row"))
+
+    # lubridate on date and time columns (not done yet)
     )
 
 # update changes to dataframe list in the global environment
 list2env(temperature_df_list_purrr, .GlobalEnv)
-
-# Create columns from file name contents
-# add column for 'below' or 'above'
-# add column for site
-# add column for groundcover
-# not applied yet
-temperature_names_parts <- strsplit(temperature_names, "_")
-  site <- temperature_names_parts[2]
-  plot_ID <- temperature_names_parts[3]
-  sens_placement <- temperature_names_parts[4]
-
-# lubridate on date and time columns
 
 
 
