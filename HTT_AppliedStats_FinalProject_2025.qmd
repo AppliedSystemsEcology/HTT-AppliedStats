@@ -26,8 +26,8 @@ damage_filepath <- "C:/Users/mykal/OneDrive - The Pennsylvania State University/
 setwd(damage_filepath)
 
 # read in excel data files
-TomatoThripsDamageRS <- read.xlsx(xlsxFile = "HTTFruitRating_2025.xlsx", sheet = 2)
-TomatoThripsDamageSEAREC <- read.xlsx(xlsxFile = "HTTFruitRating_2025.xlsx", sheet = 1)
+TomatoThripsDamageRS <- read.xlsx(xlsxFile = "HTTFruitRating_2025.xlsx", sheet = 2, detectDates = TRUE)
+TomatoThripsDamageSEAREC <- read.xlsx(xlsxFile = "HTTFruitRating_2025.xlsx", sheet = 1, detectDates = TRUE)
 
 ## write files into different project directory
 # file path to stats project directory RS
@@ -76,13 +76,15 @@ appliedstats_filepath_temp_RS <- "C:/Users/mykal/OneDrive - The Pennsylvania Sta
 
 for (i in seq_along(temperature_list_RS)) {
   # read excel files
-  xlsxFile <- read.xlsx(paste0(temperature_RS_directory,"/",temperature_list_RS[i]))
+  xlsxFileRS <- read.xlsx(paste0(temperature_RS_directory,"/",temperature_list_RS[i]), detectDates = TRUE, colNames = FALSE)
    # Add "temp_" prefix to file name
   new_filename <- paste0("temp_", temperature_list_RS[i])
+
   # write into new directory as excel files
-  write.xlsx(xlsxFile, paste0(appliedstats_filepath_temp_RS, "/", new_filename)
+  write.xlsx(xlsxFileRS, paste0(appliedstats_filepath_temp_RS, "/", new_filename)
   )
 }
+
 
 # repeat for SEAREC
 # temperature sensors local file paths SEAREC
@@ -99,14 +101,13 @@ appliedstats_filepath_temp_SEAREC <- "C:/Users/mykal/OneDrive - The Pennsylvania
 
 for (i in seq_along(temperature_list_SEAREC)) {
   # read excel files
-  xlsxFile <- read.xlsx(paste0(temperature_SEAREC_directory,"/",temperature_list_SEAREC[i]))
+  xlsxFileSEAREC <- read.xlsx(paste0(temperature_SEAREC_directory,"/",temperature_list_SEAREC[i]), detectDates = TRUE, colNames = FALSE)
    # Add "temp_" prefix to file name
   new_filename <- paste0("temp_", temperature_list_SEAREC[i])
   # write into new directory as excel files
-  write.xlsx(xlsxFile, paste0(appliedstats_filepath_temp_SEAREC, "/", new_filename)
+  write.xlsx(xlsxFileSEAREC, paste0(appliedstats_filepath_temp_SEAREC, "/", new_filename)
   )
 }
-
 
 ```
 
@@ -115,14 +116,14 @@ for (i in seq_along(temperature_list_SEAREC)) {
 
 ```{r}
 # Set working directory in terminal
-# setwd( "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data")
+# setwd("C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data")
 
 # Load tomato thrips damage data from local environment
-TomatoThripsDamageRS <- read.xlsx("TomatoThripsDamageRS.xlsx")
-TomatoThripsDamageSEAREC <- read.xlsx("TomatoThripsDamageSEAREC.xlsx")
+TomatoThripsDamageRS <- read.xlsx("TomatoThripsDamageRS.xlsx", detectDates = TRUE)
+TomatoThripsDamageSEAREC <- read.xlsx("TomatoThripsDamageSEAREC.xlsx", detectDates = TRUE)
 
 # Load ground cover ID data from local environment
-GroundCoverID <- read.xlsx("Site_GroundCover_2025.xlsx")
+GroundCoverID <- read.xlsx("Site_GroundCover_2025.xlsx", detectDates = TRUE)
 
 # Create data frame for tomato thrips damage for both RS and SEAREC sites
 TomatoThripsDamage_raw <- bind_rows(TomatoThripsDamageRS, TomatoThripsDamageSEAREC)
@@ -135,36 +136,41 @@ TomatoThripsDamage_raw <- TomatoThripsDamage_raw %>%
 TomatoThripsDamage_raw <- left_join(TomatoThripsDamage_raw, GroundCoverID, by = "plot_ID")
 
 # Subset to remove redundant columns "X", "site.y", and "year"
-TomatoThripsDamage <- subset(TomatoThripsDamage_raw, select= -c(X, site.y, year))
+TomatoThripsDamage <- subset(TomatoThripsDamage_raw, select= -c(X6, year, site.y))
 
 # Rename column 'site.x' to 'site'
 TomatoThripsDamage <- TomatoThripsDamage %>%
-  rename(site = site.x)
-
+  rename(site = site.x) %>%
+  # change grade and damage_rating to factors
+  mutate(grade = as.factor(grade), 
+  damage_rating = as.factor(damage_rating))
 ```
 
 ```{r}
 # Tidy temperature data
+# path of directory
+temperature_directory <-"C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data"
+
 # List temperature files from local path 
-temperature_list <- list.files(path = "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data", pattern = "^temp_")
+temperature_list <- list.files(path = temperature_directory, pattern = "^temp_")
 
-# Create data frame names for temp_list without ".csv" at end
-temperature_names <- sub("\\.csv$", "", temperature_list)
+# Create data frame names for temp_list without ".xlsx" at end
+temperature_names <- sub("\\.xlsx$", "", temperature_list)
 
+# loop to read in excel files
 for (i in temperature_names) {
 # set file path
-  filepath <- file.path("C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data", 
-  paste(i, ".csv", sep = ""))
-
+  filepath <- file.path(path = temperature_directory, 
+  paste(i, ".xlsx", sep = ""))
 # read each file and name it the file name
   assign(i, 
-    read.delim(filepath,
-    skip = 19,
-    header = TRUE,
-    colClasses=c("character","character", rep("numeric", 4)),
-    sep = ","))
-
+    read.xlsx(xlsxFile = filepath,
+    startRow = 22,
+    colNames = FALSE,
+    detectDates = TRUE
+    ))
 }
+
 
 
 ## Tidy over multiple data frames
@@ -177,12 +183,13 @@ temperature_df_list_purrr <- purrr::map2(
   # Defines list of strings that correspond to data fram names
   .y = temperature_names,
   .f = ~ .x %>%
-     rename(date = YYYY.MM.DD,
-    time = HH.MM.SS,
-    temperature = Temperature...,
-    humidity = Humidity..RH.) %>%
-    # delete some empty columns
-    select(!(c(TemperatureStatus, HumidityStatus, X, X.1))) %>%
+     rename(date = X1,
+    time = X2,
+    temperature_c = X3,
+    humidity_rh = X4) %>%
+    mutate(date = as.Date(date), 
+      temperature_c = as.numeric(temperature_c),
+      humidity_rh = as.numeric(humidity_rh)) %>%
     # make sensor_ID column, named as file name
     mutate(sensor_ID = .y) %>%
     # Create columns from file name contents
@@ -205,15 +212,6 @@ temperature_df_list_purrr <- purrr::map2(
 list2env(temperature_df_list_purrr, .GlobalEnv)
 
 # make df_list into combined dataframe
-
-
-# make sure all temp readings are either all C or all F
-# read.xlsx() to pull C or F from temperature column
-
-
-
-
-
 
 
 
