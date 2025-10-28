@@ -17,7 +17,8 @@ library(purrr)
 ```{r}
 # Set working directory in terminal
 # setwd( "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data")
-
+# read xlsx from raw_data folder
+# then write out to directory
 
 # Load tomato thrips damage data from local environment
 TomatoThripsDamageRS <- read.csv("HTTFruitRating_2025_RS.csv")
@@ -63,7 +64,7 @@ for (i in temperature_names) {
     read.delim(filepath,
     skip = 19,
     header = TRUE,
-    colClasses=c("factor","factor", rep("numeric", 4)),
+    colClasses=c("character","character", rep("numeric", 4)),
     sep = ","))
 
 }
@@ -91,24 +92,27 @@ temperature_df_list_purrr <- purrr::map2(
 # add column for 'below' or 'above'
 # add column for site
 # add column for groundcover
-    separate(col = sensor_ID, into = c("temp", "site", "plot_ID_row", "sensor_placement"), sep = "_") %>%
+# add column for replacement
+    separate(col = sensor_ID, into = c("temp", "site", "plot_ID_row", "sensor_placement", "replacement"), sep = "_") %>%
   # delete dummy temp column
-    select(!(temp)) 
-    #%>%
-    # separate plot_ID and row (this isnt working with no deliminator)
-    #separate(col = plot_ID_row, into = c("plot_ID", "row"))
-
-    # lubridate on date and time columns (not done yet)
+    select(!(temp)) %>%
+    # make new columns plot_ID and row
+    mutate(
+      plot_ID = substr(plot_ID_row, 1,1), row = substr(plot_ID_row,2,2)) %>%
+    # remove column plot_ID_row
+    select(!(plot_ID_row))
+    # lubridate on date and time columns to change data types
     )
 
 # update changes to dataframe list in the global environment
 list2env(temperature_df_list_purrr, .GlobalEnv)
 
+# make df_list into combined dataframe
 
 
-## data corrections with if then statement
 # make sure all temp readings are either all C or all F
-# fill gaps with averages
+# read.xlsx() to pull C or F from temperature column
+
 
 
 
