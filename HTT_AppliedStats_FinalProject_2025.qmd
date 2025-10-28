@@ -12,20 +12,117 @@ format: html
 library(tidyverse)
 library(dplyr)
 library(purrr)
+library(openxlsx)
 ```
+
+```{r}
+# Reads in data from raw excel files and writes them out as copies into different directory
+
+## Damage data
+# damage rating local file path
+damage_filepath <- "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/raw_data"
+
+# change wd to damage file path
+setwd(damage_filepath)
+
+# read in excel data files
+TomatoThripsDamageRS <- read.xlsx(xlsxFile = "HTTFruitRating_2025.xlsx", sheet = 2)
+TomatoThripsDamageSEAREC <- read.xlsx(xlsxFile = "HTTFruitRating_2025.xlsx", sheet = 1)
+
+## write files into different project directory
+# file path to stats project directory RS
+appliedstats_filepath_RSDamage <- "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data/TomatoThripsDamageRS.xlsx"
+
+# write damage data to applied stats directory
+write.xlsx(TomatoThripsDamageRS, file = appliedstats_filepath_RSDamage, sheetName = "TomatoThripsDamageRS")
+
+# file path to stats project directory SEAREC
+appliedstats_filepath_SEARECDamage <- "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data/TomatoThripsDamageSEAREC.xlsx"
+
+# write damage data to applied stats directory
+write.xlsx(TomatoThripsDamageSEAREC, file = appliedstats_filepath_SEARECDamage, sheetName = "TomatoThripsDamageSEAREC")
+
+#################################
+## Ground cover data
+# ground cover ID local file path
+groundcover_filepath <- "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/logistics_and_mgmt"
+
+# change wd to ground cover file path
+setwd(groundcover_filepath)
+
+# read in excel data files
+GroundCoverID <- read.xlsx(xlsxFile = "Site_GroundCover_2025.xlsx", sheet = 1, rows = 1:13)
+
+# file path to stats project directory ground_cover_ID
+appliedstats_filepath_GroundCoverID <- "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data/Site_GroundCover_2025.xlsx"
+
+# write ground cover ID data to applied stats directory
+write.xlsx(GroundCoverID, file = appliedstats_filepath_GroundCoverID, sheetName = "Site_GroundCover_2025")
+
+#######################################################
+
+## Temperature sensor data
+# temperature sensors local file paths RS
+temperature_RS_directory <- "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/raw_data/tempsensor_export/RockSprings"
+
+# set wd to temp data RS
+setwd(temperature_RS_directory)
+
+# list of excel files in local directory
+temperature_list_RS <- list.files(path = temperature_RS_directory, pattern = "^RS_")
+
+# new directory location
+appliedstats_filepath_temp_RS <- "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data/"
+
+for (i in seq_along(temperature_list_RS)) {
+  # read excel files
+  xlsxFile <- read.xlsx(paste0(temperature_RS_directory,"/",temperature_list_RS[i]))
+   # Add "temp_" prefix to file name
+  new_filename <- paste0("temp_", temperature_list_RS[i])
+  # write into new directory as excel files
+  write.xlsx(xlsxFile, paste0(appliedstats_filepath_temp_RS, "/", new_filename)
+  )
+}
+
+# repeat for SEAREC
+# temperature sensors local file paths SEAREC
+temperature_SEAREC_directory <- "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/raw_data/tempsensor_export/SEAREC"
+
+# set wd to temp data SEAREC
+setwd(temperature_SEAREC_directory)
+
+# list of excel files in local directory
+temperature_list_SEAREC <- list.files(path = temperature_SEAREC_directory, pattern = "^SEAREC_")
+
+# new directory location
+appliedstats_filepath_temp_SEAREC <- "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data/"
+
+for (i in seq_along(temperature_list_SEAREC)) {
+  # read excel files
+  xlsxFile <- read.xlsx(paste0(temperature_SEAREC_directory,"/",temperature_list_SEAREC[i]))
+   # Add "temp_" prefix to file name
+  new_filename <- paste0("temp_", temperature_list_SEAREC[i])
+  # write into new directory as excel files
+  write.xlsx(xlsxFile, paste0(appliedstats_filepath_temp_SEAREC, "/", new_filename)
+  )
+}
+
+
+```
+
+
+
 
 ```{r}
 # Set working directory in terminal
 # setwd( "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data")
-# read xlsx from raw_data folder
-# then write out to directory
 
 # Load tomato thrips damage data from local environment
-TomatoThripsDamageRS <- read.csv("HTTFruitRating_2025_RS.csv")
-TomatoThripsDamageSEAREC <- read.csv("HTTFruitRating_2025_SEAREC.csv")
+TomatoThripsDamageRS <- read.xlsx("TomatoThripsDamageRS.xlsx")
+TomatoThripsDamageSEAREC <- read.xlsx("TomatoThripsDamageSEAREC.xlsx")
 
 # Load ground cover ID data from local environment
-GroundCoverID <- read.csv("Site_GroundCover_2025_appliedstats.csv")
+GroundCoverID <- read.xlsx("Site_GroundCover_2025.xlsx")
 
 # Create data frame for tomato thrips damage for both RS and SEAREC sites
 TomatoThripsDamage_raw <- bind_rows(TomatoThripsDamageRS, TomatoThripsDamageSEAREC)
