@@ -16,6 +16,7 @@ library(openxlsx)
 ```
 
 ```{r}
+## DO NOT RUN, FILES ALREADY EXIST 
 # Reads in data from raw excel files and writes them out as copies into different directory
 
 ## Damage data
@@ -205,15 +206,14 @@ temperature_df_list_purrr <- purrr::map2(
       plot_ID = substr(plot_ID_row, 1,1), row = substr(plot_ID_row,2,2)) %>%
     # remove column plot_ID_row
     select(!(plot_ID_row))
-    # lubridate on date and time columns to change data types
+    # lubridate on date and time columns to change data types (not done)
     )
 
 # update changes to dataframe list in the global environment
 list2env(temperature_df_list_purrr, .GlobalEnv)
 
 # make df_list into combined dataframe
-
-
-
+Temperature <- bind_rows(temperature_df_list_purrr, .id = "column_label") %>%
+    rename(sensor_ID = column_label)
 
 ```
