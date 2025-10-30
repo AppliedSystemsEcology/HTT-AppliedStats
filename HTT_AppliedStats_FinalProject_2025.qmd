@@ -13,6 +13,7 @@ library(tidyverse)
 library(dplyr)
 library(purrr)
 library(openxlsx)
+library(ggplot2)
 ```
 
 ```{r}
@@ -112,9 +113,6 @@ for (i in seq_along(temperature_list_SEAREC)) {
 
 ```
 
-
-
-
 ```{r}
 # Set working directory in terminal
 # setwd("C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data")
@@ -172,8 +170,6 @@ for (i in temperature_names) {
     ))
 }
 
-
-
 ## Tidy over multiple data frames
 # Create list of temp dataframes
 temperature_df_list <- mget(ls(.GlobalEnv, pattern = "^temp_")
@@ -213,7 +209,28 @@ temperature_df_list_purrr <- purrr::map2(
 list2env(temperature_df_list_purrr, .GlobalEnv)
 
 # make df_list into combined dataframe
-Temperature <- bind_rows(temperature_df_list_purrr, .id = "column_label") %>%
+Temperature_raw <- bind_rows(temperature_df_list_purrr, .id = "column_label") %>%
     rename(sensor_ID = column_label)
+
+# add ground cover to temp sensor data by plot_ID
+Temperature <- Temperature_raw %>%
+  left_join(GroundCoverID %>%
+   select(ground_cover, plot_ID), by = "plot_ID")
+
+```
+
+```{r}
+## Finally time for analysis!
+# Look at some data
+ggplot(data = TomatoThripsDamage, aes(x = ground_cover, y = damage_rating, color = site)) +
+  geom_point() +
+  geom_jitter()
+
+ggplot(data = Temperature, aes(x = sensor_placement, y = temperature_c, color = ground_cover)) +
+  geom_boxplot() +
+ # geom_jitter() +
+  facet_wrap(~site)
+
+
 
 ```
