@@ -142,7 +142,12 @@ TomatoThripsDamage <- TomatoThripsDamage %>%
   rename(site = site.x) %>%
   # change grade and damage_rating to factors
   mutate(grade = as.factor(grade), 
-  damage_rating = as.factor(damage_rating))
+  damage_rating = as.factor(damage_rating)) %>%
+  mutate(damage_rating= factor(damage_rating, levels = c("3", "2", "1", "0")))
+
+
+head(TomatoThripsDamage)
+summary(TomatoThripsDamage)
 ```
 
 ```{r}
@@ -172,15 +177,16 @@ for (i in temperature_names) {
 
 ## Tidy over multiple data frames
 # Create list of temp dataframes
-temperature_df_list <- mget(ls(.GlobalEnv, pattern = "^temp_")
+temperature_df_list <- mget(ls(.GlobalEnv, pattern = "^temp_"))
 
-temperature_df_list_purrr <- purrr::map2(
+temperature_df_list_purrr <- map2( 
   # Defines list of data frames
   .x = temperature_df_list,
   # Defines list of strings that correspond to data fram names
   .y = temperature_names,
-  .f = ~ .x %>%
-     rename(date = X1,
+  # Defines function to apply -- must use parentheses before .x to get dplyr to work!!
+  .f = ~ (.x %>%
+    rename(date = X1,
     time = X2,
     temperature_c = X3,
     humidity_rh = X4) %>%
@@ -191,21 +197,23 @@ temperature_df_list_purrr <- purrr::map2(
     # make sensor_ID column, named as file name
     mutate(sensor_ID = .y) %>%
     # Create columns from file name contents
-# add column for 'below' or 'above'
-# add column for site
-# add column for groundcover
-# add column for replacement
+    # add column for 'below' or 'above'
+    # add column for site
+    # add column for groundcover
+    # add column for replacement
     separate(col = sensor_ID, into = c("temp", "site", "plot_ID_row", "sensor_placement", "replacement"), sep = "_") %>%
   # delete dummy temp column
-    select(!(temp)) %>%
+    mutate(temp = NULL) %>%
     # make new columns plot_ID and row
-    mutate(
-      plot_ID = substr(plot_ID_row, 1,1), row = substr(plot_ID_row,2,2)) %>%
+    mutate(plot_ID = substr(plot_ID_row, 1,1), row = substr(plot_ID_row,2,2)) %>%
     # remove column plot_ID_row
-    select(!(plot_ID_row)) %>%
+    mutate(plot_ID_row = NULL) %>%
     # lubridate create date_time column as date-time data type
     mutate(date_time = ymd_hms(paste(date, time)))
-    )
+  )
+)
+
+
 
 # update changes to dataframe list in the global environment
 list2env(temperature_df_list_purrr, .GlobalEnv)
@@ -230,25 +238,54 @@ Temperature_below <- Temperature %>%
 ```
 
 ```{r}
+library(MASS)
+library(ordinal)
+library(rcompanion)
+library(brant)
+library(car)
 ## Finally time for analysis!
-# Look at some data
-ggplot(data = TomatoThripsDamage, aes(x = ground_cover, y = damage_rating, color = site)) +
-  geom_point() +
-  geom_jitter()
-
-ggplot(data = Temperature, aes(x = sensor_placement, y = temperature_c, color = ground_cover)) +
-  geom_boxplot() +
- # geom_jitter() +
-  facet_wrap(~site)
-
 
 ## Research question: Is thrips damage severity on tomato fruits impacted by ground cover type in high tunnel tomatoes?
 # Null hypothesis: Thrips damage severity does not differ across ground cover type.
 # Response variable: damage severity (categorical-ordinal)
 # Predictor variable: ground cover (categorical-discrete)
+# Other predictor variables:  site (categorical-nominal), date (not sure type of data)
 # Data: TomatoThripsDamage
+
+# Look at raw data first
+ggplot(data = TomatoThripsDamage, aes(x = ground_cover, y = damage_rating, color = site)) +
+  geom_jitter() +
+  facet_wrap(~site)
+
+# labellers
+severity_colors <- c("0" = "#390099", "1" = "#9E0059", "2"= "#FF0054", "3" = "#FF5400")
+severity_labels <- c("0" = "None", "1" = "Mild", "2"= "Moderate", "3" = "Severe")
+ground_cover_labels <- c("fabric" = "Fabric", "soil" = "Soil", "straw" = "Straw")
+
+# Damage severity by ground cover raw
+ggplot(TomatoThripsDamage, aes(x = ground_cover, fill = damage_rating)) +
+  geom_histogram(stat = "count") +
+  facet_wrap(~site) +
+  labs(x = "Ground Cover", y = "Fruit Count", fill = "Damage Severity") +
+  scale_fill_manual(values = severity_colors, labels = severity_labels) +
+  scale_x_discrete(labels = ground_cover_labels)
+
+# damage severity over time facet wrapped by ground cover and site
+ggplot(TomatoThripsDamage, aes(x = date, color = damage_rating)) +
+  geom_line(stat = "count") + 
+  facet_grid(site ~ ground_cover) +
+  labs(x = "Date", y = "Fruit Count", color = "Damage Severity") +
+  scale_color_manual(values = severity_colors, labels = severity_labels)
+
 # Proposed model
 # damage~site*ground_cover*date
+## try ordered logistic regression
+# may need some help on how to do this
+
+# ordered logistic regression
+# this model isn't working 
+damage.model <- polr(damage_rating~site*ground_cover*date, data=TomatoThripsDamage, Hess=TRUE)
+summary(damage.model)
 
 
 
@@ -259,6 +296,45 @@ ggplot(data = Temperature, aes(x = sensor_placement, y = temperature_c, color = 
 # temperature~site*sensor_placement*ground_cover*date_time
 # If sensor placement is sig, then maybe make two different models; one for above and one for below?
 
+# Look at data first
+ggplot(data = Temperature, aes(x = sensor_placement, y = temperature_c, color = ground_cover)) +
+  geom_boxplot() +
+  stat_summary(fun = "mean") +
+  facet_wrap(~site)
+
+
+hist(Temperature$temperature_c)
+# looks pretty normal!
+qqnorm(Temperature$temperature_c)
+qqline(Temperature$temperature_c)
+# these don't look great
+
+
+# null model
+temperature.null <- lm(temperature_c~1, data = Temperature)
+# full model
+temperature.full <- lm(temperature_c~sensor_placement*ground_cover*site*date_time, data = Temperature)
+vif(temperature.full, type = "predictor")
+plot(residuals(temperature.full))
+
+
+
+
+ 
+
+# step model selection
+step(temperature.null,
+     scope = list(upper=temperature.full),
+     direction="both",
+     data=Temperature)
+# this is crazy, too many interactions
+
+
+
+
+
+
+
 
 
 
@@ -267,6 +343,9 @@ ggplot(data = Temperature, aes(x = sensor_placement, y = temperature_c, color = 
 # Response variable: above-ground temperature (numeric-continuous)
 # Predictor variable: ground cover (categorical-discrete)
 # Data: Temperature_above
+temperature_above.lm <- lm(temperature_c~ground_cover, data = Temperature_above)
+summary(temperature_above.lm)
+
 
 # Below-ground
 # Response variable: below-ground temperature (numeric-continuous)
