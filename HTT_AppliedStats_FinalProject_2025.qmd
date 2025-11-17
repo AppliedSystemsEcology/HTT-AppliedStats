@@ -143,7 +143,8 @@ TomatoThripsDamage <- TomatoThripsDamage %>%
   # change grade and damage_rating to factors
   mutate(grade = as.factor(grade), 
   damage_rating = as.factor(damage_rating)) %>%
-  mutate(damage_rating= factor(damage_rating, levels = c("3", "2", "1", "0")))
+  mutate(damage_rating = factor(damage_rating, levels = c("3", "2", "1", "0")),
+    julian_day = yday(date)) 
 
 
 head(TomatoThripsDamage)
@@ -209,7 +210,13 @@ temperature_df_list_purrr <- map2(
     # remove column plot_ID_row
     mutate(plot_ID_row = NULL) %>%
     # lubridate create date_time column as date-time data type
-    mutate(date_time = ymd_hms(paste(date, time)))
+    mutate(date_time = ymd_hms(paste(date, time))) %>%
+    # add julian_day column
+    # assign 'day' and 'night' to 6AM-8PM for summer daylight coverage
+    mutate(julian_day = yday(date),
+      day_night = case_when(
+        between(time, as_hms("06:00:00"), as_hms("20:00:00")) ~ "daytime",
+        TRUE ~ "nighttime")
   )
 )
 
@@ -225,15 +232,23 @@ Temperature_raw <- bind_rows(temperature_df_list_purrr, .id = "column_label") %>
 # add ground cover to temp sensor data by plot_ID
 Temperature <- Temperature_raw %>%
   left_join(GroundCoverID %>%
-   select(ground_cover, plot_ID), by = "plot_ID")
+   dplyr::select(ground_cover, plot_ID), by = "plot_ID")
+
+# Aggregate data frame for mean temperature_c
+Temperature.agg <- Temperature %>%
+  group_by(julian_day, site, sensor_placement, ground_cover, day_night) %>%
+  summarize(mean_temperature_c = mean(temperature_c, na.rm = TRUE))
+
+
 
 # Temperature subsets for above- and below-ground
+# maybe use aggregate data frame here
 # Above-ground
-Temperature_above <- Temperature %>%
-  subset(sensor_placement == "a")
+# Temperature_above <- Temperature %>%
+#  subset(sensor_placement == "a")
 # Below-ground
-Temperature_below <- Temperature %>%
-  subset(sensor_placement == "b")
+#Temperature_below <- Temperature %>%
+#  subset(sensor_placement == "b")
 
 ```
 
@@ -249,7 +264,7 @@ library(car)
 # Null hypothesis: Thrips damage severity does not differ across ground cover type.
 # Response variable: damage severity (categorical-ordinal)
 # Predictor variable: ground cover (categorical-discrete)
-# Other predictor variables:  site (categorical-nominal), date (not sure type of data)
+# Other predictor variables:  site (categorical-nominal), date (not sure type of data) or julian_day(numerical-continuous)
 # Data: TomatoThripsDamage
 
 # Look at raw data first
@@ -283,11 +298,29 @@ ggplot(TomatoThripsDamage, aes(x = date, color = damage_rating)) +
 # may need some help on how to do this
 
 # ordered logistic regression
-# this model isn't working 
-damage.model <- polr(damage_rating~site*ground_cover*date, data=TomatoThripsDamage, Hess=TRUE)
+# models the relationship between the predictors and an outcome variable with there or more categories that have a natural order
+# polr () - proportional odds logistic  regression
+# Hess=TRUE for the model to rreturn the observed information matrix from optimizatio which is used to get standard errors
+
+# model with julian_day instead of date
+damage.model <- polr(damage_rating~site*ground_cover*julian_day, data=TomatoThripsDamage, Hess=TRUE)
 summary(damage.model)
 
+# look at significance of variables
+## store table
+(ctable <- coef(summary(damage.model)))
+## calculate and store p values
+p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
+## combined table
+(ctable <- cbind(ctable, "p value" = p))
 
+# model with no interaction terms 
+damage.model <- polr(damage_rating~site+ground_cover+julian_day, data=TomatoThripsDamage, Hess=TRUE)
+summary(damage.model)
+# the first model with interaction terms has a slightly higher AIC, indicating a better model?
+
+# I'm having a hard time interpreting this model and doing model selection here
+# I'm not sure how to decide when to include interaction terms?
 
 
 ## Research question: Is above- or below-ground temperature impacted by ground cover type in high-tunnel tomatoes?
@@ -302,18 +335,41 @@ ggplot(data = Temperature, aes(x = sensor_placement, y = temperature_c, color = 
   stat_summary(fun = "mean") +
   facet_wrap(~site)
 
-
+# raw temp data
 hist(Temperature$temperature_c)
 # looks pretty normal!
 qqnorm(Temperature$temperature_c)
 qqline(Temperature$temperature_c)
 # these don't look great
 
+# Look at aggregate data mean temp
+ggplot(data = Temperature.agg, aes(x = sensor_placement, y = mean_temperature_c, color = ground_cover)) +
+  geom_boxplot() +
+  facet_wrap(~site)
+
+# mean temp data
+hist(Temperature.agg$mean_temperature_c)
+qqnorm(Temperature.agg$mean_temperature_c)
+qqline(Temperature.agg$mean_temperature_c)
+
+# Look at aggregate data mean temp with day_night
+ggplot(data = Temperature.agg, aes(x = sensor_placement, y = mean_temperature_c, color = ground_cover)) +
+  geom_jitter() +
+  facet_grid(day_night~site)
+
+ggplot(data = Temperature.agg, aes(x = sensor_placement, y = mean_temperature_c, color = ground_cover)) +
+geom_boxplot() +
+facet_grid(day_night~site)
+
+ggplot(data = Temperature.agg, aes(mean_temperature_c, color = ground_cover)) +
+geom_histogram() +
+facet_grid(day_night~site+ground_cover)
+
 
 # null model
-temperature.null <- lm(temperature_c~1, data = Temperature)
+temperature.null <- lm(mean_temperature_c~1, data = Temperature.agg)
 # full model
-temperature.full <- lm(temperature_c~sensor_placement*ground_cover*site*date_time, data = Temperature)
+temperature.full <- lm(mean_temperature_c~sensor_placement*ground_cover*site*julian_day*day_night, data = Temperature.agg)
 vif(temperature.full, type = "predictor")
 plot(residuals(temperature.full))
 
