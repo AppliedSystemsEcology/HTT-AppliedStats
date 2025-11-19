@@ -14,6 +14,7 @@ library(dplyr)
 library(purrr)
 library(openxlsx)
 library(ggplot2)
+library(hms)
 ```
 
 ```{r}
@@ -141,6 +142,7 @@ TomatoThripsDamage <- subset(TomatoThripsDamage_raw, select= -c(X6, year, site.y
 TomatoThripsDamage <- TomatoThripsDamage %>%
   rename(site = site.x) %>%
   # change grade and damage_rating to factors
+  # add julian_day column
   mutate(grade = as.factor(grade), 
   damage_rating = as.factor(damage_rating)) %>%
   mutate(damage_rating = factor(damage_rating, levels = c("3", "2", "1", "0")),
@@ -214,12 +216,12 @@ temperature_df_list_purrr <- map2(
     # add julian_day column
     # assign 'day' and 'night' to 6AM-8PM for summer daylight coverage
     mutate(julian_day = yday(date),
-      day_night = case_when(
-        between(time, as_hms("06:00:00"), as_hms("20:00:00")) ~ "daytime",
+      day_night = dplyr::case_when(
+        between(time, hms::as_hms("06:00:00"), hms::as_hms("20:00:00")) ~ "daytime",
         TRUE ~ "nighttime")
+      )
   )
 )
-
 
 
 # update changes to dataframe list in the global environment
@@ -234,21 +236,18 @@ Temperature <- Temperature_raw %>%
   left_join(GroundCoverID %>%
    dplyr::select(ground_cover, plot_ID), by = "plot_ID")
 
-# Aggregate data frame for mean temperature_c
+# Aggregate data frame for mean temperature_c 
 Temperature.agg <- Temperature %>%
-  group_by(julian_day, site, sensor_placement, ground_cover, day_night) %>%
+  group_by(julian_day, site, sensor_placement, ground_cover, plot_ID, day_night) %>%
   summarize(mean_temperature_c = mean(temperature_c, na.rm = TRUE))
 
-
-
 # Temperature subsets for above- and below-ground
-# maybe use aggregate data frame here
 # Above-ground
-# Temperature_above <- Temperature %>%
-#  subset(sensor_placement == "a")
+Temperature_above <- Temperature.agg %>%
+  subset(sensor_placement == "a")
 # Below-ground
-#Temperature_below <- Temperature %>%
-#  subset(sensor_placement == "b")
+Temperature_below <- Temperature.agg %>%
+  subset(sensor_placement == "b")
 
 ```
 
@@ -260,6 +259,7 @@ library(brant)
 library(car)
 ## Finally time for analysis!
 
+############ Thrips Damage ##############
 ## Research question: Is thrips damage severity on tomato fruits impacted by ground cover type in high tunnel tomatoes?
 # Null hypothesis: Thrips damage severity does not differ across ground cover type.
 # Response variable: damage severity (categorical-ordinal)
@@ -298,9 +298,12 @@ ggplot(TomatoThripsDamage, aes(x = date, color = damage_rating)) +
 # may need some help on how to do this
 
 # ordered logistic regression
-# models the relationship between the predictors and an outcome variable with there or more categories that have a natural order
-# polr () - proportional odds logistic  regression
-# Hess=TRUE for the model to rreturn the observed information matrix from optimizatio which is used to get standard errors
+# models the relationship between the predictors and an outcome variable with three or more categories that have a natural order
+# polr () - proportional odds logistic regression
+# Hess=TRUE for the model to return the observed information matrix from optimization which is used to get standard errors
+
+# can you include random effects in logistic regression?
+## ggplot by plot to see if theres visual difference
 
 # model with julian_day instead of date
 damage.model <- polr(damage_rating~site*ground_cover*julian_day, data=TomatoThripsDamage, Hess=TRUE)
@@ -314,20 +317,38 @@ p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
 ## combined table
 (ctable <- cbind(ctable, "p value" = p))
 
-# model with no interaction terms 
+# model with no interaction terms, use this model over one with interactions
 damage.model <- polr(damage_rating~site+ground_cover+julian_day, data=TomatoThripsDamage, Hess=TRUE)
 summary(damage.model)
 # the first model with interaction terms has a slightly higher AIC, indicating a better model?
+# output are log-odds
+# may need to back-transfrom for interpretation
 
 # I'm having a hard time interpreting this model and doing model selection here
 # I'm not sure how to decide when to include interaction terms?
 
+# maybe try multinomial
 
+####### two models, one for each site since site has a large effect (remove site from model)
+library(nnet)
+# establish baseline
+TomatoThripsDamage$damage_rating_baseline <- relevel(TomatoThripsDamage$damage_rating, ref = "0")
+#multinomial logistic regression model
+m <- multinom(damage_rating_baseline~site+ground_cover+julian_day, data = TomatoThripsDamage)
+summary(m)
+z <- summary(m)$coefficients/summary(m)$standard.errors
+z
+p <- (1 - pnorm(abs(z), 0, 1)) * 2
+p
+
+####### Temperature ##########
 ## Research question: Is above- or below-ground temperature impacted by ground cover type in high-tunnel tomatoes?
 # Null hypothesis: Average temperature (below or above ground) does not differ across ground cover type. 
 # Proposed model
-# temperature~site*sensor_placement*ground_cover*date_time
-# If sensor placement is sig, then maybe make two different models; one for above and one for below?
+# temperature~site*sensor_placement*ground_cover*julian_day
+# If sensor placement is sig, then maybe make two different models; one for above and one for below? yes to this
+# include random effects maybe?
+
 
 # Look at data first
 ggplot(data = Temperature, aes(x = sensor_placement, y = temperature_c, color = ground_cover)) +
@@ -352,9 +373,13 @@ hist(Temperature.agg$mean_temperature_c)
 qqnorm(Temperature.agg$mean_temperature_c)
 qqline(Temperature.agg$mean_temperature_c)
 
+hist(Temperature_above$mean_temperature_c)
+hist(Temperature_below$mean_temperature_c)
+
+
 # Look at aggregate data mean temp with day_night
 ggplot(data = Temperature.agg, aes(x = sensor_placement, y = mean_temperature_c, color = ground_cover)) +
-  geom_jitter() +
+  geom_boxplot() +
   facet_grid(day_night~site)
 
 ggplot(data = Temperature.agg, aes(x = sensor_placement, y = mean_temperature_c, color = ground_cover)) +
@@ -364,6 +389,41 @@ facet_grid(day_night~site)
 ggplot(data = Temperature.agg, aes(mean_temperature_c, color = ground_cover)) +
 geom_histogram() +
 facet_grid(day_night~site+ground_cover)
+
+###### two models above and below ground
+# continue in this vein
+# above
+# needs transformation
+t_above <- lm(mean_temperature_c~site+ground_cover+julian_day+day_night+ I(julian_day^2), data = Temperature_above)
+summary(t_above)
+
+ggplot(Temperature_above, aes(x=julian_day, y=mean_temperature_c))+
+geom_point()
+
+
+sqrt(mean(Temperature_above$mean_temperature_c))
+var(Temperature_above$mean_temperature_c)
+# look at residuals
+plot(residuals(t_above))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # null model
