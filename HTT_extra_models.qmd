@@ -1,0 +1,40 @@
+---
+title: "HTT_AppliedStats_alt_models_2025"
+format: html
+---
+```{r}
+############ Thrips Damage ##############
+## Research question: Is thrips damage severity on tomato fruits impacted by ground cover type in high tunnel tomatoes?
+# Null hypothesis: Thrips damage severity does not differ across ground cover type.
+# Response variable: damage severity (categorical-ordinal)
+# Predictor variable: ground cover (categorical-discrete)
+# Other predictor variables:  site (categorical-nominal), date (not sure type of data) or julian_day(numerical-continuous)
+# Data: TomatoThripsDamage
+
+# try ordered logistic regression
+
+## ordered logistic regression
+# models the relationship between the predictors and an outcome variable with three or more categories that have a natural order
+# polr () - proportional odds logistic regression
+# Hess=TRUE for the model to return the observed information matrix from optimization which is used to get standard errors
+
+# model with julian_day instead of date
+damage.model <- polr(damage_rating~site*ground_cover*julian_day, data=TomatoThripsDamage, Hess=TRUE)
+summary(damage.model)
+
+# look at significance of variables
+## store table
+(ctable <- coef(summary(damage.model)))
+## calculate and store p values
+p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
+## combined table
+(ctable <- cbind(ctable, "p value" = p))
+
+# model with no interaction terms, use this model over one with interactions
+damage.model <- polr(damage_rating~site+ground_cover+julian_day, data=TomatoThripsDamage, Hess=TRUE)
+summary(damage.model)
+# the first model with interaction terms has a slightly higher AIC
+# output are log-odds
+# may need to back-transfrom for interpretation
+## trying a different model approach
+```
