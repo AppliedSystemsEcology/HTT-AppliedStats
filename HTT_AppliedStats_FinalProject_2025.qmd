@@ -22,11 +22,15 @@ library(hms)
 # setwd("C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data")
 
 # Load tomato thrips damage data from local environment
-TomatoThripsDamageRS <- read.xlsx("TomatoThripsDamageRS.xlsx", detectDates = TRUE)
-TomatoThripsDamageSEAREC <- read.xlsx("TomatoThripsDamageSEAREC.xlsx", detectDates = TRUE)
+# replace with path to "TomatoThripsDamageRS.xlsx"
+TomatoThripsDamageRS <- read.xlsx("C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data/TomatoThripsDamageRS.xlsx", detectDates = TRUE)
+
+# replace with path to "TomatoThripsDamageSEAREC.xlsx"
+TomatoThripsDamageSEAREC <- read.xlsx("C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data/TomatoThripsDamageSEAREC.xlsx", detectDates = TRUE)
 
 # Load ground cover ID data from local environment
-GroundCoverID <- read.xlsx("Site_GroundCover_2025.xlsx", detectDates = TRUE)
+# replace with path to "Site_GroundCover_2025.xlsx"
+GroundCoverID <- read.xlsx("C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data/Site_GroundCover_2025.xlsx", detectDates = TRUE)
 
 # Create data frame for tomato thrips damage `  for both RS and SEAREC sites
 TomatoThripsDamage_raw <- bind_rows(TomatoThripsDamageRS, TomatoThripsDamageSEAREC)
@@ -87,7 +91,8 @@ summary(TomatoThripsDamage)
 ```{r}
 # Tidy temperature data
 # path of directory
-temperature_directory <-"C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data"
+# Replace with path to where temperature .xlsx files are
+temperature_directory <- "C:/Users/mykal/OneDrive - The Pennsylvania State University/Grab Lab - Mykalas_Projects - Documents/Mykalas_Projects/projects/High Tunnel Thrips/analysis/HTT-AppliedStats/data"
 
 # List temperature files from local path 
 temperature_list <- list.files(path = temperature_directory, pattern = "^temp_")
@@ -229,13 +234,10 @@ Temperature_below_SEAREC <- Temperature.agg %>%
 
 ```{r}
 # Load libraries
-library(MASS)
-library(ordinal)
-library(rcompanion)
-library(brant)
-library(car)
 library(sjPlot)
 library(nnet)
+library(lme4)
+library(lmerTest)
 
 
 ## Finally time for analysis!
@@ -257,7 +259,7 @@ ggplot(data = TomatoThripsDamage, aes(x = ground_cover, y = damage_rating, color
   facet_wrap(~site)
 
 # labellers
-severity_colors <- c("0" = "#264653", "1" = "#2A9D8F", "2"= "#E9C46A", "3" = "#F4A261")
+severity_colors <- c("0" = "#785EF0", "1" = "#DC267F", "2"= "#FE6100", "3" = "#FFB000")
 severity_labels <- c("0" = "None", "1" = "Mild", "2"= "Moderate", "3" = "Severe")
 ground_cover_labels <- c("fabric" = "Fabric", "soil" = "Soil", "straw" = "Straw")
 
@@ -274,6 +276,7 @@ ggplot(TomatoThripsDamage, aes(x = ground_cover, fill = damage_rating)) +
         legend.title=element_text(size=13),
         legend.text=element_text(size=12),
         strip.text=element_text(size=13))
+
 
 # damage severity over time facet wrapped by ground cover and site
 ggplot(TomatoThripsDamage, aes(x = date, color = damage_rating)) +
@@ -333,12 +336,17 @@ tab_model(multinom_RS,
            transform = NULL, 
            show.est = TRUE, 
            show.se = TRUE,
+          show.stat = TRUE,
+          show.df = TRUE,
+          show.ci = FALSE,
+          col.order = c("est", "se", "stat", "df.error", "response.level", "p"),
            title = "Multinominal Logistic Regression Summary for Rock Springs",
            string.se = "SE",
            p.style = "numeric",
            string.ci = "CI (95%)",
            string.pred = "Coefficient",
            string.p = "p-value",
+          string.stat = "Z Statistic",
            digits = 3,
            dv.labels = "Damage Rating (baseline)",
            pred.labels = c(
@@ -362,18 +370,6 @@ tab_model(multinom_RS,
 # interpretations of coefficients (effect size)
 # example:  A one-unit increase in the variable write is associated with the decrease in the log odds of being in general program vs. academic program in the amount of .058 .
 
-# I've only written these for significant predictors (see p-value table)
-## this isn't the right interpretation I dont think 0-1: The predictor fabric ground cover is associated with the decrease in the log odds of fruit having mild damage vs. no damage in the amount of 8.21
-
-
-# The log odds of having mild damage (1) vs. no damage (0) will decrease by ???
-# The log odds of being in vocation program vs. in academic program will decrease by 0.983 if moving from ses="low" to ses="high".
-
-# interpretation of p value table
-# For 0-1, significant predictors: fabric ground cover and julian day
-# For 0-2, significant predictors: soil ground cover and julian day
-# For 0-3, sigfificant predictors: no significant predictors
-
 # calculate p values using two-tailed z-tests
 z <- summary(multinom_RS)$coefficients/summary(multinom_RS)$standard.errors
 z
@@ -388,7 +384,7 @@ p
 # interpretation of p value table
 # For 0-1, significant predictors: fabric ground cover and julian day
 # For 0-2, significant predictors: soil ground cover and julian day
-# For 0-3, sigfificant predictors: no significant predictors
+# For 0-3, significant predictors: no significant predictors
 
 
 # relative risk (or odds): the ratio of the probability of choosing one alternative outcome over the probability of choosing the baseline; the right-hand side linear equation exponentiated, meaning the exponentiated regression coefficients are relative risk rations for a unit change in the predictor variable
@@ -401,7 +397,8 @@ relriskRS <- as.data.frame(exp(coef(multinom_RS)))
 
 # relative risk data frame as nice HTML table
 tab_df(relriskRS,
-        title = "Relative Risk (Exponentiated Model Coefficients)",
+       show.rownames = TRUE,
+        title = "Relative Risk Ratio (Exponentiated Model Coefficients)",
         col.header = c("Ground Cover (Fabric)",
             "Ground Cover (Soil)",
             "Ground Cover (Straw)",
@@ -410,7 +407,7 @@ tab_df(relriskRS,
         )
 
 # this model lacks comparisons between alternative ratings (ie. 1-2,2-3, or 1-3)
-# So this model shows the liklihood of observing each damage severity compared to no damage
+# So this model shows the likelihood of observing each damage severity compared to no damage
 # but I think that's okay because I'm not sure its valuable to know the likelihood
 # of moving between damage severity ratings
 
@@ -450,11 +447,16 @@ tab_model(multinom_SEAREC,
            transform = NULL, 
            show.est = TRUE, 
            show.se = TRUE,
+          show.stat = TRUE,
+          show.df = TRUE,
+          show.ci = FALSE,
+          col.order = c("est", "se", "stat", "df.error", "response.level", "p"),
            title = "Multinominal Logistic Regression Summary for SEAREC",
            string.se = "SE",
            p.style = "numeric",
            string.ci = "CI (95%)",
            string.pred = "Coefficient",
+          string.stat = "Z Statistic",
            string.p = "p-value",
            digits = 3,
            dv.labels = "Damage Rating (baseline)",
@@ -478,21 +480,46 @@ p
 # 3 3.693369e-04       0.17773169       0.038992924 1.193430e-04
 # 2 3.931580e-06       0.01334034       0.008143323 4.566245e-06
 
+# interpretation of p value table
+# For 1-3, significant predictors: fabric ground cover and julian day
+# For 1-2, significant predictors: fabric ground cover, soil ground cover, straw ground cover, and julian day
+
 # relative risk ratios
 relriskSEAREC <- as.data.frame(exp(coef(multinom_SEAREC)))
 #   (Intercept) ground_coversoil ground_coverstraw julian_day
 # 3    5868.634        0.5932946          2.274620  0.9625095
 # 2    9433.051        0.4567981          2.391754  0.9639063
 
+## correct for centered julian day to have interpretable intercept values
+
+# Calculate the mean of the Julian day
+mean_jd <- mean(TomatoThripsDamage_SEAREC$julian_day)
+
+# Create a centered Julian day variable
+TomatoThripsDamage_SEAREC$julian_day_centered <- TomatoThripsDamage_SEAREC$julian_day - mean_jd
+
+# Rerun the model with the centered variable
+multinom_SEAREC_centered <- multinom(
+    formula = damage_rating_baseline ~ ground_cover + julian_day_centered, 
+    data = TomatoThripsDamage_SEAREC
+)
+
+# Recalculate the RRRs
+centered_rrr_values <- as.data.frame(exp(coef(multinom_SEAREC_centered)))
+
+print(centered_rrr_values)
+
 # relative risk data frame as nice HTML table
-tab_df(relriskSEAREC,
-        title = "Relative Risk (Exponentiated Model Coefficients)",
+tab_df(centered_rrr_values,
+       show.rownames = TRUE,
+        title = "Relative Risk Ratio (Exponentiated Model Coefficients)",
         col.header = c("Ground Cover (Fabric)",
             "Ground Cover (Soil)",
             "Ground Cover (Straw)",
             "Julian Day"),
             digits = 4,   
         )
+
 
 
 
@@ -504,7 +531,7 @@ tab_df(relriskSEAREC,
 
 
 # labellers
-ground_cover_colors <- c("fabric" = "#0E4749", "straw" = "#E55812","soil"= "#95C623")
+ground_cover_colors <- c("fabric" = "#648FFF", "straw" = "#DC267F","soil"= "#FE6100")
 ground_cover_labels <- c("fabric" = "Fabric", "soil" = "Soil", "straw" = "Straw")
 
 
@@ -555,11 +582,10 @@ facet_grid(day_night~site)
 
 
 ###### two models above and below ground
-# continue in this vein
 # above
 # needs transformation
 ### find way to reduce model bias, increase model complexity
-t_above <- lm(mean_temperature_c~site+ground_cover+julian_day+day_night+ I(julian_day^2), data = Temperature_above)
+t_above <- lmer(mean_temperature_c~site*ground_cover*julian_day*day_night+ (1|sub_plot), data = Temperature_above)
 summary(t_above)
 
 ggplot(Temperature_above, aes(x=julian_day, y=mean_temperature_c))+
@@ -571,52 +597,53 @@ var(Temperature_above$mean_temperature_c)
 # look at residuals
 plot(residuals(t_above))
 
-
-## step model selection
-## lowest AIC is better
-
 ## try separated by site
-# RS above ground
-# null model
-temperature.null <- lm(mean_temperature_c~1, data = Temperature_above_RS)
-# full model
-temperature.full <- lm(mean_temperature_c~ground_cover*julian_day*day_night*plot_ID, data = Temperature_above_RS)
-
-# step model selection
-step(temperature.null,
-     scope = list(upper=temperature.full),
-     direction="both",
-     data=Temperature)
-# plot_ID is sig, so maybe make a mixed model
-
-library(lme4)
-library(lmerTest)
-### fit on these models still isnt right
-
 ## mixed model with subplot as a random effect
-# no sensors above ground on fabric ground cover I guess?
+# no sensors above ground on fabric ground cover
 mixed <- lmer(mean_temperature_c~ground_cover*julian_day*day_night+ (1|sub_plot), data = Temperature_above_RS)
 summary(mixed)
+
+#anova
+anova(mixed)
+#sig differences between groups in julian_day and day_night
+# sig interaction term with julian_day and day_night
+# no sig differences between ground cover
+
+# Estimate the slope of 'julian_day' for each level of 'day_night'
+trends_output <- emtrends(
+  object = mixed, 
+  specs = ~ day_night, 
+  var = "julian_day"
+)
+comparison_of_slopes <- pairs(trends_output)
+# barely significant, but not enough to be concerning
+
 
 #not good
 plot(residuals(mixed))
 plot(mixed)
+# seems like temporal autocorrelation
 
 # pretty table HTML of model output
 tab_model(mixed,
            transform = NULL, 
            show.est = TRUE, 
            show.se = TRUE,
+          show.df = TRUE,
+          show.stat = TRUE,
+          col.order = c("est", "se", "ci", "stat", "df.error", "p"),
            title = "Mixed Linear Model Summary for Rock Springs",
            string.se = "SE",
            p.style = "numeric",
            string.ci = "CI (95%)",
+          string.df = "DF",
            string.pred = "Coefficient",
            string.p = "p-value",
+          string.stat = "T Statistic",
            digits = 3,
            dv.labels = "Above-Ground Mean Temperature (C)",
-           pred.labels = c(
-            "Ground Cover (Soil)",
+            pred.labels = c(
+            "Intercept",
             "Ground Cover (Straw)",
             "Julian Day",
             "Day/Night (Nighttime)",
@@ -627,15 +654,12 @@ tab_model(mixed,
            )
            )
 
-
-library(sjPlot)
 # model visualization
     plot_model(
   model = mixed,
   type = "pred",
   terms = c("julian_day", "ground_cover", "day_night"),
-  show.scatter = TRUE,
-  #legend.title = "",
+  show.scatter = TRUE
 )
 
 # data visualization
@@ -645,10 +669,11 @@ facet_grid(~day_night)
 
 # Mean temp by ground cover raw
 ggplot(Temperature_above_RS, aes(x = julian_day, y = mean_temperature_c, color = ground_cover)) +
-  geom_line() +
+  geom_jitter(alpha=0.30) +
+  geom_smooth(se=FALSE) +
   facet_wrap(~day_night, labeller = as_labeller(c(daytime = "Daytime", nighttime = "Nighttime"))) +
   labs(x = "Julian Day", y = "Mean Temperature (C)", color = "Ground Cover", title = "Mean Above-Ground Temperature (C) at Rock Springs") +
-  scale_color_manual(values = c("straw" = "#E55812","soil"= "#95C623"), labels = c("soil" = "Soil", "straw" = "Straw"))+
+  scale_color_manual(values = c("straw" = "#DC267F","soil"= "#FE6100"), labels = c("soil" = "Soil", "straw" = "Straw"))+
   theme(axis.text=element_text(size=13),
         axis.title=element_text(size=15),
         plot.title=element_text(size=15, face="bold"),
@@ -659,41 +684,36 @@ ggplot(Temperature_above_RS, aes(x = julian_day, y = mean_temperature_c, color =
         panel.background = element_rect(fill = "#F4F4F4"))
 
 
-
-# Damage severity by ground cover raw
-ggplot(Temperature_above_RS, aes(x = julian_day, y = mean_temperature_c, color = ground_cover)) +
-  geom_line() +
-  facet_wrap(~day_night) +
-  labs(x = "Julian Day", y = "Mean Temperature (C)", color = "Ground Cover", title = "Mean Above-Ground Temperature (C) at Rock Springs") +
-  scale_color_manual(values = ground_cover_labels, labels = ground_cover_labels)+
-  theme(axis.text=element_text(size=13),
-        axis.title=element_text(size=15),
-        plot.title=element_text(size=15, face="bold"),
-        legend.title=element_text(size=13),
-        legend.text=element_text(size=12),
-        strip.text=element_text(size=13))
-
 ## repeat for below ground RS
 ## mixed model with subplot as a random effect
 mixed <- lmer(mean_temperature_c~ground_cover*day_night*julian_day+ (1|sub_plot), data = Temperature_below_RS)
 summary(mixed)
 
+#anova
+anova(mixed)
+# sig difference between groups in ground_cover, day_night
+# sig interaction terms of ground_cover:day_night, day_night:julian_day, 3 way interaction
 
 # pretty table HTML of model output
 tab_model(mixed,
            transform = NULL, 
            show.est = TRUE, 
            show.se = TRUE,
+          show.df = TRUE,
+          show.stat = TRUE,
+          col.order = c("est", "se", "ci", "stat", "df.error", "p"),
            title = "Mixed Linear Model Summary for Rock Springs",
            string.se = "SE",
            p.style = "numeric",
            string.ci = "CI (95%)",
            string.pred = "Coefficient",
            string.p = "p-value",
+          string.stat = "T Statistic",
+          string.df = "DF",
            digits = 3,
            dv.labels = "Below-Ground Mean Temperature (C)",
            pred.labels = c(
-            "Ground Cover (Fabric)",
+            "Intercept",
             "Ground Cover (Soil)",
             "Ground Cover (Straw)",
             "Day/Night (Nighttime)",
@@ -709,15 +729,115 @@ tab_model(mixed,
            )
 
 
-library(sjPlot)
 # model visualization
     plot_model(
   model = mixed,
   type = "pred",
   terms = c("julian_day", "ground_cover", "day_night"),
-  show.scatter = TRUE,
-  #legend.title = "",
+  show.scatter = TRUE
 )
+
+## post-hoc pairwise for interactions
+# Estimate the slope of 'julian_day' for each level of 'day_night'
+trends_output <- emtrends(
+  object = mixed, 
+  specs = ~ day_night, 
+  var = "julian_day"
+)
+comparison_of_slopes <- pairs(trends_output)
+#  contrast            estimate      SE   df t.ratio p.value
+# daytime - nighttime   -0.022 0.00618 1287  -3.563  0.0004
+#
+# Results are averaged over the levels of: ground_cover 
+# Degrees-of-freedom method: kenward-roger
+
+# Estimate the marginal means for interaction
+emm_means <- emmeans(
+  object = mixed, 
+  specs = ~ ground_cover * day_night
+)
+
+# Compare the ground covers within each day_night
+pairs(emm_means, by = "day_night") 
+# day_night = daytime:
+# contrast       estimate    SE      df t.ratio p.value
+# fabric - soil    0.6040 0.392 1286.95   1.541  0.2723
+# fabric - straw   6.3784 0.992    1.20   6.428     NaN
+# soil - straw     5.7744 0.999    1.23   5.779     NaN
+#
+# day_night = nighttime:
+# contrast       estimate    SE      df t.ratio p.value
+# fabric - soil    0.9520 0.392 1286.95   2.428  0.0405
+# fabric - straw   0.9053 0.992    1.20   0.912     NaN
+# soil - straw    -0.0467 0.999    1.23  -0.047     NaN
+#
+#Degrees-of-freedom method: kenward-roger 
+#P value adjustment: tukey method for comparing a family of 3 estimates 
+
+
+
+# Estimate the slope of julian_day for every unique combination of the other two factors
+emm_3way_trends <- emtrends(
+  object = mixed,
+  specs = pairwise ~ day_night | ground_cover, # Compare day/night slopes within each ground cover
+  var = "julian_day"
+)
+
+# View all comparisons
+print(emm_3way_trends)
+#$emtrends
+#ground_cover = fabric:
+# day_night julian_day.trend      SE   df lower.CL upper.CL
+# daytime           -0.03286 0.00734 1288 -0.04725  -0.0185
+# nighttime          0.01928 0.00734 1288  0.00489   0.0337
+#
+#ground_cover = soil:
+# day_night julian_day.trend      SE   df lower.CL upper.CL
+# daytime            0.00763 0.00793 1278 -0.00793   0.0232
+# nighttime         -0.00104 0.00793 1278 -0.01661   0.0145
+#
+#ground_cover = straw:
+# day_night julian_day.trend      SE   df lower.CL upper.CL
+# daytime           -0.00229 0.00772 1287 -0.01742   0.0129
+# nighttime          0.02031 0.00772 1287  0.00518   0.0355
+#
+#Degrees-of-freedom method: kenward-roger 
+#Confidence level used: 0.95 
+#
+#$contrasts
+#ground_cover = fabric:
+# contrast            estimate     SE   df t.ratio p.value
+# daytime - nighttime -0.05214 0.0103 1287  -5.072  <.0001
+#
+#ground_cover = soil:
+# contrast            estimate     SE   df t.ratio p.value
+# daytime - nighttime  0.00868 0.0109 1287   0.795  0.4266
+
+#ground_cover = straw:
+# contrast            estimate     SE   df t.ratio p.value
+# daytime - nighttime -0.02260 0.0109 1287  -2.071  0.0385
+
+# make table of post-hoc contrasts
+trends_df <- as_tibble(emm_3way_trends$contrasts)
+  
+    trends_table <- trends_df %>%
+      select(ground_cover, contrast, estimate, SE, df, t.ratio, p.value) %>%
+      rename(
+        `Ground Cover` = ground_cover,
+        `Contrast (Daytime - Nighttime)` = contrast,
+        `Estimate (Slope Difference)` = estimate,
+        `SE` = SE,
+        `df` = df,
+        `t Ratio` = t.ratio,
+        `p-value` = p.value
+      )
+
+tab_df(trends_df,
+       col.header = c("Contrast", "Ground Cover", "Estimate", "SE", "DF", "T Ratio", "P Value"),
+       digits = 7,
+       p.style = "numeric"
+       )
+
 
 # data visualization
 ggplot(data = Temperature_below_RS, aes(x=julian_day, y=mean_temperature_c, color= ground_cover)) +
@@ -726,7 +846,8 @@ facet_wrap(~day_night)
 
 # fig for paper
 ggplot(data = Temperature_below_RS, aes(x = julian_day, y = mean_temperature_c, color = ground_cover)) +
-  geom_line() +
+  geom_jitter(alpha=0.30) +
+  geom_smooth(se=FALSE) +
   facet_wrap(~day_night, labeller = as_labeller(c(daytime = "Daytime", nighttime = "Nighttime"))) +
   labs(x = "Julian Day", y = "Mean Temperature (C)", color = "Ground Cover", title = "Mean Below-Ground Temperature (C) at Rock Springs") +
   scale_color_manual(values = ground_cover_colors, labels = ground_cover_labels)+
@@ -746,21 +867,33 @@ ggplot(data = Temperature_below_RS, aes(x = julian_day, y = mean_temperature_c, 
 mixed <- lmer(mean_temperature_c~ground_cover*julian_day*day_night+ (1|sub_plot), data = Temperature_above_SEAREC  %>% filter(julian_day<226))
 summary(mixed)
 
+#anova
+anova(mixed)
+# sig difference between groups for julian_day and day_night
+# no sig interactions
+
+
+
 # pretty table HTML of model output
 tab_model(mixed,
            transform = NULL, 
            show.est = TRUE, 
            show.se = TRUE,
+          show.df = TRUE, 
+          show.stat = TRUE,
+          col.order = c("est", "se", "ci", "stat", "df.error", "p"),
            title = "Mixed Linear Model Summary for SEAREC",
            string.se = "SE",
            p.style = "numeric",
            string.ci = "CI (95%)",
            string.pred = "Coefficient",
+          string.stat = "T Statistic",
            string.p = "p-value",
+          string.df = "DF",
            digits = 3,
            dv.labels = "Above-Ground Mean Temperature (C)",
            pred.labels = c(
-            "Ground Cover (Fabric)",
+            "Intercept",
             "Ground Cover (Soil)",
             "Ground Cover (Straw)",
             "Julian Day",
@@ -775,17 +908,12 @@ tab_model(mixed,
            )
            )
 
-
-
-
-library(sjPlot)
 # model visualization
     plot_model(
   model = mixed,
   type = "pred",
   terms = c("julian_day", "ground_cover", "day_night"),
-  show.scatter = TRUE,
-  #legend.title = "",
+  show.scatter = TRUE
 )
 
 # data visualization
@@ -800,7 +928,8 @@ facet_grid(~day_night)
 
 # fig for paper
 ggplot(data = Temperature_above_SEAREC  %>% filter(julian_day<226), aes(x = julian_day, y = mean_temperature_c, color = ground_cover)) +
-  geom_line() +
+  geom_jitter(alpha=0.30) +
+  geom_smooth(se=FALSE) +
   facet_wrap(~day_night, labeller = as_labeller(c(daytime = "Daytime", nighttime = "Nighttime"))) +
   labs(x = "Julian Day", y = "Mean Temperature (C)", color = "Ground Cover", title = "Mean Above-Ground Temperature (C) at SEAREC") +
   scale_color_manual(values = ground_cover_colors, labels = ground_cover_labels)+
@@ -814,28 +943,38 @@ ggplot(data = Temperature_above_SEAREC  %>% filter(julian_day<226), aes(x = juli
         panel.background = element_rect(fill = "#F4F4F4"))
 
 
-
-# below ground
+# below ground SEAREC
 ## mixed model with subplot as a random effect
-## filtered to account for filter dying early
+## filtered to account for sensor dying early
 mixed <- lmer(mean_temperature_c~ground_cover*julian_day*day_night+ (1|sub_plot), data = Temperature_below_SEAREC %>% filter(julian_day<237))
 summary(mixed)
+
+#anova
+anova(mixed)
+# sig differences between groups in ground_cover, julian_day, day_night
+# sig interaction terms of ground_cover:day_night, julian_day:day_night
+
 
 # pretty table HTML of model output
 tab_model(mixed,
            transform = NULL, 
            show.est = TRUE, 
            show.se = TRUE,
+          show.stat = TRUE,
+          show.df = TRUE,
+          col.order = c("est", "se", "ci", "stat", "df.error", "p"),
            title = "Mixed Linear Model Summary for SEAREC",
            string.se = "SE",
            p.style = "numeric",
            string.ci = "CI (95%)",
            string.pred = "Coefficient",
            string.p = "p-value",
+          string.df = "DF",
+          string.stat = "T Statistic",
            digits = 3,
            dv.labels = "Below-Ground Mean Temperature (C)",
            pred.labels = c(
-            "Ground Cover (Fabric)",
+            "Intercept",
             "Ground Cover (Soil)",
             "Ground Cover (Straw)",
             "Julian Day",
@@ -850,18 +989,47 @@ tab_model(mixed,
            )
            )
 
-
-
-library(sjPlot)
 # model visualization
     plot_model(
   model = mixed,
   type = "pred",
   terms = c("julian_day", "ground_cover", "day_night"),
-  show.scatter = TRUE,
-  #legend.title = "",
+  show.scatter = TRUE
 )
 
+
+# post hoc analysis of interaction terms  
+# ground_cover:day_night
+# Estimate marginal means for the interaction
+emm_means_interaction1 <- emmeans(
+  object = mixed, 
+  specs = ~ ground_cover * day_night
+)
+
+# compare ground covers within each day_night level
+pairs(emm_means_interaction1, by = "day_night")
+
+# julian_day:day_night
+# Estimate the slope of 'julian_day' for each level of 'day_night'
+trends_output <- emtrends(
+  object = mixed, 
+  specs = ~ day_night, 
+  var = "julian_day"
+)
+comparison_of_slopes <- pairs(trends_output)
+
+# table
+tab_df(as.data.frame(comparison_of_slopes),
+       digits = 4)
+
+
+
+tab_df(trends_df,
+       col.header = c("Contrast", "Ground Cover", "Estimate", "SE", "DF", "T Ratio", "P Value"),
+       digits = 7,
+       p.style = "numeric"
+       )
+    
 # data visualization raw
 ggplot(data = Temperature_below_SEAREC, aes(x=julian_day, y=mean_temperature_c, color = ground_cover, linetype=plot_ID)) +
 geom_line() +
@@ -874,7 +1042,8 @@ facet_grid(~day_night)
 
 # fig for paper
 ggplot(data = Temperature_below_SEAREC %>% filter(julian_day<237), aes(x = julian_day, y = mean_temperature_c, color = ground_cover)) +
-  geom_line() +
+  geom_jitter(alpha=0.30) +
+  geom_smooth(se=FALSE) +
   facet_wrap(~day_night, labeller = as_labeller(c(daytime = "Daytime", nighttime = "Nighttime"))) +
   labs(x = "Julian Day", y = "Mean Temperature (C)", color = "Ground Cover", title = "Mean Below-Ground Temperature (C) at SEAREC") +
   scale_color_manual(values = ground_cover_colors, labels = ground_cover_labels)+
@@ -886,6 +1055,7 @@ ggplot(data = Temperature_below_SEAREC %>% filter(julian_day<237), aes(x = julia
         strip.text=element_text(size=15),
         strip.background = element_rect(fill = "#E9E9E9"),
         panel.background = element_rect(fill = "#F4F4F4"))
+
 
 
 
